@@ -4,7 +4,8 @@ import sys
 import carla
 import random
 import time
-
+import numpy as np
+import cv2
 
 try:
     sys.path.append(
@@ -22,9 +23,39 @@ except IndexError:
 
 
 # Setting the image size of camera image
-IM_WIDTH = 640      
+IM_WIDTH = 640
 IM_HEIGHT = 480
 
+
+# def process_img(image):
+#     i = np.array(image.raw_data)
+#     # print(i.shape)
+#     # print(dir(image))         # if you wanted to know the attributes used in the numpy image
+    
+#     # image is just in flat array of one number need to reshape to proper image using the dimensions given above 
+#     # `4` denote the image is in RGBA `A is for Alpha (information)`
+#     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4)) 
+#     # first index denote the total height, 2nd denote the total width and `:3` denote the image type which is RGB
+#     # Remember we don't need the 4th parameter that is of information about the image
+#     i3 = i2[:, :, :3] 
+    
+#     cv2.imshow("", i3)
+#     cv2.waitKey(1) 
+    
+#     return i3/255.0   # for normalization of the data we want data in `0` & `1`
+
+    
+def process_img(image, l_images):
+    i = np.array(image.raw_data)
+    # print(i.shape)
+    i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))  # rgba, a for alpha (opacity)
+    # /255.0 # entire height, entire width, only rgb (no alpha)
+    i3 = i2[:, :, :3]
+    print(i3[1, 1, :])
+    l_images.append(i3)
+    return  # i3/255.0 # normalize the data
+
+    
 actor_list = (
     []
 )  # List of actors used in the simulation, will make easy for us to deal with actors
@@ -60,20 +91,36 @@ try:
         carla.VehicleControl(throttle=2.0, steer=0.0)
     )  # driving the car with the speed of 2.0 in a straight direction
 
-    actor_list.append(vehicle)   # appending our car actor to a list so that at the end of simulation we can destroy it
-    
+    actor_list.append(
+        vehicle
+    )  # appending our car actor to a list so that at the end of simulation we can destroy it
+
     camera_bp = blueprint_library.find("sensor.camera.rgb")
     camera_bp.set_attribute("image_size_x", f"{IM_WIDTH}")
     camera_bp.set_attribute("image_size_y", f"{IM_HEIGHT}")
     camera_bp.set_attribute("fov", "110")  # setting the field of view
-    
-    spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))     # point where to fix the camera
-    sensor = world.spawn_actor(camera_bp, spawn_point, attach_to=vehicle)   # passing the attributes set above for the sensor
+
+    spawn_point = carla.Transform(
+        carla.Location(x=2.5, z=0.7)
+    )  # point where to fix the camera
+    sensor = world.spawn_actor(
+        camera_bp, spawn_point, attach_to=vehicle
+    )  # passing the attributes set above for the sensor
     actor_list.append(sensor)
-    
-    sensor.listen(lambda data: process_img(data))
-    
-    
+    l_images = []
+    sensor.listen(lambda data: process_img(data, l_images))
+
+    time.sleep(10)
+
+    sensor.stop()
+
+    for im in l_images:
+        cv2.imshow('image', im)
+        cv2.waitKey(16)
+
+        
+
+
     time.sleep(10)
 finally:
 
