@@ -62,7 +62,7 @@ actor_list = (
 
 try:
     client = carla.Client(
-        "localhost", 2000
+        "51.143.13.46", 2000
     )  # Means CARLA will run on Local machine. Some public ip in case of remote server which is not recommended
 
     client.set_timeout(30)  # Defines for how much time the simulation should run
